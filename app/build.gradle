@@ -7,7 +7,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        minSdkVersion 15
+        minSdkVersion 19
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
@@ -43,8 +43,8 @@ dependencies {
     implementation "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
     implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
     implementation "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-    implementation 'androidx.core:core-ktx:1.12.0'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.21"
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
     implementation 'com.badlogicgames.gdx:gdx-platform:1.9.8:natives-armeabi'
     implementation 'com.badlogicgames.gdx:gdx-platform:1.9.8:natives-armeabi-v7a'
     implementation 'com.badlogicgames.gdx:gdx-platform:1.9.8:natives-x86'
