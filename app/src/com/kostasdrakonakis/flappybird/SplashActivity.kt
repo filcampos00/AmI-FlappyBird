@@ -32,6 +32,8 @@ class SplashActivity : Activity() {
             IntentNavigator.startMainActivity(this)
         }
 
-        MyModel.doStuff(context = this)
+        findViewById<Button>(R.id.aiButton).setOnClickListener {
+            MyModel.doStuff(context = this)
+        }
     }
 }
