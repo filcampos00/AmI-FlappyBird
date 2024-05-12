@@ -15,6 +15,7 @@
  */
 package com.kostasdrakonakis.flappybird
 
+import ai.MyModel
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
@@ -29,6 +30,10 @@ class SplashActivity : Activity() {
         setContentView(R.layout.activity_splash)
         findViewById<Button>(R.id.playButton).setOnClickListener {
             IntentNavigator.startMainActivity(this)
+        }
+
+        findViewById<Button>(R.id.aiButton).setOnClickListener {
+            MyModel.doStuff(context = this)
         }
     }
 }
