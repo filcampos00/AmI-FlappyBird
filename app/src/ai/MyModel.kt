@@ -2,30 +2,32 @@ package ai
 
 import android.content.Context
 import android.util.Log
-import com.opencsv.CSVReader
-import java.io.InputStreamReader
+import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 
 class MyModel {
 
     companion object {
-        fun readAllCsvFiles(context: Context, directory: String) {
+        fun doStuff(context: Context) {
+            readAllCsvFiles(context, "sampledata/positive")
+//            readAllCsvFiles(context, "sampledata/negative")
+        }
+
+        private fun readAllCsvFiles(context: Context, directory: String) {
             val assetManager = context.assets
             val files = assetManager.list(directory) ?: emptyArray()
 
             for (file in files) {
-                val inputStream = assetManager.open("$directory/$file")
-                val reader = CSVReader(InputStreamReader(inputStream))
+                val fileName = "$directory/$file"
+                val inputStream = assetManager.open(fileName)
 
-                // Process the CSV records
-                val records = reader.readAll()
-                for (record in records) {
-                    for (column in record) {
-                        Log.d("MyModel", "$record, $column")
-                    }
-                }
+                // Read the CSV file (with header)
+                val rows: List<Map<String, String>> = csvReader().readAllWithHeader(inputStream)
 
-                // Close the reader
-                reader.close()
+                Log.d("MyModel", "FileName: $fileName")
+                Log.d("MyModel", "Size: ${rows.size}")
+                Log.d("MyModel", "Rows: $rows")
+
+
             }
         }
     }
