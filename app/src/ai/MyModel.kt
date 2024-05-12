@@ -2,25 +2,31 @@ package ai
 
 import android.content.Context
 import android.util.Log
-import java.io.BufferedReader
-import java.io.File
+import com.opencsv.CSVReader
 import java.io.InputStreamReader
 
 class MyModel {
 
     companion object {
-        fun readCsvFileLineByLine(context: Context) {
+        fun readAllCsvFiles(context: Context, directory: String) {
             val assetManager = context.assets
-            val inputStream = assetManager.open("sampledata/positive/Accelerometer00.csv")
-            val reader = BufferedReader(InputStreamReader(inputStream))
+            val files = assetManager.list(directory) ?: emptyArray()
 
-            reader.forEachLine { line ->
-                val tokens = line.split(",")
-                // Process tokens here
-                Log.d("MyModel", tokens[0])
+            for (file in files) {
+                val inputStream = assetManager.open("$directory/$file")
+                val reader = CSVReader(InputStreamReader(inputStream))
+
+                // Process the CSV records
+                val records = reader.readAll()
+                for (record in records) {
+                    for (column in record) {
+                        Log.d("MyModel", "$record, $column")
+                    }
+                }
+
+                // Close the reader
+                reader.close()
             }
-
-            reader.close()
         }
     }
 }

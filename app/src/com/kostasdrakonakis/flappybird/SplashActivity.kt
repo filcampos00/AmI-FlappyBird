@@ -32,6 +32,7 @@ class SplashActivity : Activity() {
             IntentNavigator.startMainActivity(this)
         }
 
-        MyModel.readCsvFileLineByLine(context = this)
+        MyModel.readAllCsvFiles(context = this, "sampledata/positive")
+        MyModel.readAllCsvFiles(context = this, "sampledata/negative")
     }
 }
