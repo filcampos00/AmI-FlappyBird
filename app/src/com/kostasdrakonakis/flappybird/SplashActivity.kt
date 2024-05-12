@@ -15,6 +15,7 @@
  */
 package com.kostasdrakonakis.flappybird
 
+import ai.MyModel
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
@@ -30,5 +31,7 @@ class SplashActivity : Activity() {
         findViewById<Button>(R.id.playButton).setOnClickListener {
             IntentNavigator.startMainActivity(this)
         }
+
+        MyModel.readCsvFileLineByLine(context = this)
     }
 }
