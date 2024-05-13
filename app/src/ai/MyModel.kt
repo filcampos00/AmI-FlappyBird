@@ -7,7 +7,7 @@ import com.github.doyaaaaaken.kotlincsv.dsl.csvWriter
 import java.io.File
 
 class MyModel {
-    // Read CSV files from the resources folder and write them to 1 CSV file in the internal storage
+    // Read all CSV sample data files from the resources folder and aggregates them into 1 CSV file in the internal storage
     private fun readAndWriteCsv(
         context: Context,
         headers: List<String>,
