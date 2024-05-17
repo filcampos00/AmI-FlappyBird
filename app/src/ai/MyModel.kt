@@ -4,9 +4,6 @@ import android.content.Context
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.github.doyaaaaaken.kotlincsv.dsl.csvWriter
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class MyModel {
 
@@ -17,12 +14,14 @@ class MyModel {
         headers: List<String>,
         targetFileName: String,
         directory: String,
+        label: Int,
         createTargetFile: Boolean
     ) {
         val assetManager = context.resources.assets
         val files = assetManager.list(directory) ?: emptyArray()
         val targetFile = File(context.filesDir, targetFileName)
 
+        // createTargetFile should be true for the first method call, and false for subsequent calls
         if (createTargetFile) {
             // Delete the file if it exists
             if (targetFile.exists()) {
@@ -30,8 +29,7 @@ class MyModel {
             }
 
             targetFile.createNewFile()
-
-            // Write headers to the output file
+            // Write headers to the target file
             csvWriter().writeAll(listOf(headers), targetFile, append = false)
         }
 
@@ -41,63 +39,54 @@ class MyModel {
             val inputStream = assetManager.open(fileName)
 
             // Read the CSV file
-            val rows: List<List<String>> = (csvReader().readAll(inputStream))
+            val csvRows: List<List<String>> = (csvReader().readAll(inputStream))
             // Drop header row, then create chunks of 100 rows (segmentation: for 100Hz sampling rate, 100 samples = 1 second)
-            val groupedRows = rows.drop(1).chunked(100)
+            val groupedRows = csvRows.drop(1).chunked(100)
 
-            calculateAverages(groupedRows)
+            val rowsAverage = calculateAverages(groupedRows)
 
-//                val rowsAverage = listOf(listOf(zAverage) , listOf(yAverage), listOf(xAverage))
-//                csvWriter().writeAll(rowsAverage, targetFile, append = true)
+            val datasetRows: MutableList<List<String>> = mutableListOf()
+            for (i in rowsAverage[0].indices) {
+                val row = listOf(
+                    rowsAverage[0][i].toString(),  // zAverage
+                    rowsAverage[1][i].toString(),  // yAverage
+                    rowsAverage[2][i].toString(),  // xAverage
+                    label.toString()
+                )
+                datasetRows.add(row)
+            }
+            // Write the dataset rows to the target file
+            csvWriter().writeAll(datasetRows, targetFile, append = true)
         }
     }
 
     // Calculate the average values for each chunk
-    private fun calculateAverages(groupedRows: List<List<List<String>>>) {
-        val timeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+    private fun calculateAverages(groupedRows: List<List<List<String>>>): List<MutableList<Double>> {
+        val zList = mutableListOf<Double>()
+        val yList = mutableListOf<Double>()
+        val xList = mutableListOf<Double>()
 
         for (group in groupedRows) {
-            // Calculate averages for z, y, x
             val zAverage = group.map { it[2].toDouble() }.average()
             val yAverage = group.map { it[3].toDouble() }.average()
             val xAverage = group.map { it[4].toDouble() }.average()
 
-            // Calculate mean time in nanoseconds
-            val meanTimeNanos = group.map { it[0].toLong() }.average().toLong()
-            // Convert nanoseconds to milliseconds
-            val meanTimeMillis = meanTimeNanos / 1_000_000
-            // Convert milliseconds to a human-readable format
-            val meanTime = timeFormatter.format(Date(meanTimeMillis))
-
-            // Calculate average seconds elapsed (optional)
-            val secondsElapsedAverage = group.map { it[1].toDouble() }.average()
-
-            // Output
-            println("Mean Time: $meanTime")
-            println(
-                "Average Seconds Elapsed: ${
-                    String.format(
-                        Locale.getDefault(),
-                        "%.2f",
-                        secondsElapsedAverage
-                    )
-                }"
-            )
-            println("z: $zAverage")
-            println("y: $yAverage")
-            println("x: $xAverage")
-            println("---")
+            zList.add(zAverage)
+            yList.add(yAverage)
+            xList.add(xAverage)
         }
+
+        return listOf(zList, yList, xList)
     }
 
     private fun preprocessData(context: Context) {
-        val headers = listOf("time", "seconds_elapsed", "z", "y", "x", "label")
-        val targetFileName = "accelerometer_data.csv"
+        val headers = listOf("z", "y", "x", "label")
+        val targetFileName = "accelerometer_dataset.csv"
         val positiveFolder = "sampledata/positive"
         val negativeFolder = "sampledata/negative"
 
-        readAndWriteCsv(context, headers, targetFileName, positiveFolder, true)
-//        readAndWriteCsv(context, headers, targetFileName, negativeFolder, false)
+        readAndWriteCsv(context, headers, targetFileName, positiveFolder, 1, true)
+        readAndWriteCsv(context, headers, targetFileName, negativeFolder, 0, false)
     }
 
     companion object {
