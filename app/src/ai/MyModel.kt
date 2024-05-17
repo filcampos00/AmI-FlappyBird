@@ -7,8 +7,6 @@ import java.io.File
 import kotlin.math.sqrt
 
 class MyModel {
-
-
     // Read all CSV sample data files from the resources folder and aggregates them into 1 CSV file in the internal storage
     private fun aggregateCsvData(
         context: Context,
@@ -101,7 +99,10 @@ class MyModel {
     }
 
     // Calculate the Pearson correlation coefficient between two lists of values
-    private fun computeCorrelationCoefficient(values1: List<Double>, values2: List<Double>): Double {
+    private fun computeCorrelationCoefficient(
+        values1: List<Double>,
+        values2: List<Double>
+    ): Double {
         val mean1 = values1.average()
         val mean2 = values2.average()
         val numerator = values1.zip(values2).sumOf { (v1, v2) -> (v1 - mean1) * (v2 - mean2) }
