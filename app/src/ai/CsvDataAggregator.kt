@@ -9,14 +9,13 @@ import java.text.DecimalFormat
 import kotlin.math.sqrt
 
 class CsvDataAggregator {
-    internal fun generateDataset(context: Context) {
+    internal fun generateDataset(context: Context, datasetFileName: String) {
         val headers = listOf(
             "z_mean", "z_stdDev", "z_median", "z_max", "z_min", "z_range",
             "y_mean", "y_stdDev", "y_median", "y_max", "y_min", "y_range",
             "x_mean", "x_stdDev", "x_median", "x_max", "x_min", "x_range",
             "zy_correlation", "zx_correlation", "yx_correlation", "label"
         )
-        val datasetFileName = "accelerometer_dataset.csv"
         val positiveFolder = "sampledata/positive"
         val negativeFolder = "sampledata/negative"
 
