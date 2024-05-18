@@ -12,6 +12,7 @@ android {
         versionCode 1
         versionName "1.0"
         applicationId "com.kostasdrakonakis.flappybird"
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -56,6 +57,8 @@ dependencies {
 
     // https://github.com/doyaaaaaken/kotlin-csv
     implementation 'com.github.doyaaaaaken:kotlin-csv-jvm:1.9.3'
+    implementation files('libs/weka_3_7_13_mobile.jar')
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
 
 
