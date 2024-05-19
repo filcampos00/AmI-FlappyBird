@@ -55,7 +55,6 @@ dependencies {
     implementation 'com.github.kostasdrakonakis:android-navigator:1.2.6'
     kapt 'com.github.kostasdrakonakis:android-navigator-compiler:1.2.6'
 
-    // https://github.com/doyaaaaaken/kotlin-csv
     implementation 'com.github.doyaaaaaken:kotlin-csv-jvm:1.9.3'
     implementation files('libs/weka_3_7_13_mobile.jar')
     implementation 'androidx.multidex:multidex:2.0.1'

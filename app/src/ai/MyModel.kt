@@ -2,13 +2,17 @@ package ai
 
 import android.content.Context
 import weka.classifiers.Classifier
+import weka.classifiers.Evaluation
+import weka.classifiers.meta.CVParameterSelection
 import weka.classifiers.trees.J48
 import weka.core.Instances
 import weka.core.SerializationHelper
+import weka.core.Utils
 import weka.core.converters.CSVLoader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.Random
 
 class MyModel {
     companion object {
@@ -16,7 +20,7 @@ class MyModel {
         private const val MODEL_FILE_NAME = "movement_model.model"
         fun doStuff(context: Context) {
             val csvDataAggregator = CsvDataAggregator()
-            csvDataAggregator.generateDataset(context, DATASET_FILE_NAME)
+//            csvDataAggregator.generateDataset(context, DATASET_FILE_NAME)
             trainAndPredict(context)
         }
 
@@ -36,24 +40,44 @@ class MyModel {
             // Split dataset - 80% training, 20% testing
             val trainSize = (instances.numInstances() * 0.8).toInt()
             val testSize = instances.numInstances() - trainSize
-            instances.randomize(java.util.Random(1))
+            instances.randomize(Random(1))
             val trainDataset = Instances(instances, 0, trainSize)
             val testDataset = Instances(instances, trainSize, testSize)
 
-            // Train model using Decision Tree
-            val classifier = J48()
-            classifier.buildClassifier(trainDataset)
+            // tune hyper parameters
+            val bestClassifier = tuneHyperParameters(trainDataset)
 
             // Validate, predict, and save model
-            validate(classifier, trainDataset)
-            predict(classifier, testDataset)
-            saveModel(context, classifier)
+//            validate(bestClassifier, trainDataset)
+            predict(bestClassifier, testDataset)
+            saveModel(context, bestClassifier)
+        }
+
+        // Hyper parameter Tuning
+        private fun tuneHyperParameters(trainDataset: Instances): Classifier {
+            val paramSelection = CVParameterSelection()
+            paramSelection.classifier = J48()
+            paramSelection.numFolds = 10
+            paramSelection.addCVParameter("C 0.1 0.9 10")    // Confidence Factor
+//            paramSelection.addCVParameter("M 2 5 10")          // Minimum Number of Objects
+            //            paramSelection.addCVParameter("-U")                       // Unpruned
+//            paramSelection.addCVParameter("-R")                // Reduced Error Pruning
+
+
+            paramSelection.buildClassifier(trainDataset)
+
+            val bestClassifier = paramSelection.classifier
+
+            println("Best hyper parameters:")
+            println(Utils.joinOptions(paramSelection.bestClassifierOptions))
+
+            return bestClassifier
         }
 
         // Cross-validation
         private fun validate(classifier: Classifier, train: Instances) {
-            val eval = weka.classifiers.Evaluation(train)
-            eval.crossValidateModel(classifier, train, 10, java.util.Random(1))
+            val eval = Evaluation(train)
+            eval.crossValidateModel(classifier, train, 10, Random(1))
 
             println("Cross-Validation Results:")
             println(eval.toSummaryString() + "\n")
@@ -63,7 +87,7 @@ class MyModel {
 
         // Predict on testing set and evaluate
         private fun predict(classifier: Classifier, test: Instances) {
-            val eval = weka.classifiers.Evaluation(test)
+            val eval = Evaluation(test)
             eval.evaluateModel(classifier, test)
 
             println("Evaluation on Test Set:")
