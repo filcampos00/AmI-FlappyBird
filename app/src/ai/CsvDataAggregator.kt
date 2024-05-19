@@ -9,19 +9,19 @@ import java.text.DecimalFormat
 import kotlin.math.sqrt
 
 class CsvDataAggregator {
-    internal fun generateDataset(context: Context) {
+    internal fun generateDataset(context: Context, datasetFileName: String) {
         val headers = listOf(
             "z_mean", "z_stdDev", "z_median", "z_max", "z_min", "z_range",
             "y_mean", "y_stdDev", "y_median", "y_max", "y_min", "y_range",
             "x_mean", "x_stdDev", "x_median", "x_max", "x_min", "x_range",
             "zy_correlation", "zx_correlation", "yx_correlation", "label"
         )
-        val datasetFileName = "accelerometer_dataset.csv"
         val positiveFolder = "sampledata/positive"
         val negativeFolder = "sampledata/negative"
 
-        aggregateCsvData(context, headers, datasetFileName, positiveFolder, 1, true)
-        aggregateCsvData(context, headers, datasetFileName, negativeFolder, 0, false)
+        aggregateCsvData(context, headers, datasetFileName, positiveFolder, label = true, createDatasetFile = true)
+        aggregateCsvData(context, headers, datasetFileName, negativeFolder, label = false, createDatasetFile = false
+        )
     }
 
     // Read all CSV sample data files from the resources folder and aggregates them into 1 CSV file in the internal storage
@@ -31,7 +31,7 @@ class CsvDataAggregator {
         headers: List<String>,
         datasetFileName: String,
         directory: String,
-        label: Int,
+        label: Boolean,
         createDatasetFile: Boolean
     ) {
         val assetManager = context.resources.assets
