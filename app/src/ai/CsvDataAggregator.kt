@@ -19,8 +19,9 @@ class CsvDataAggregator {
         val positiveFolder = "sampledata/positive"
         val negativeFolder = "sampledata/negative"
 
-        aggregateCsvData(context, headers, datasetFileName, positiveFolder, 1, true)
-        aggregateCsvData(context, headers, datasetFileName, negativeFolder, 0, false)
+        aggregateCsvData(context, headers, datasetFileName, positiveFolder, label = true, createDatasetFile = true)
+        aggregateCsvData(context, headers, datasetFileName, negativeFolder, label = false, createDatasetFile = false
+        )
     }
 
     // Read all CSV sample data files from the resources folder and aggregates them into 1 CSV file in the internal storage
@@ -30,7 +31,7 @@ class CsvDataAggregator {
         headers: List<String>,
         datasetFileName: String,
         directory: String,
-        label: Int,
+        label: Boolean,
         createDatasetFile: Boolean
     ) {
         val assetManager = context.resources.assets
