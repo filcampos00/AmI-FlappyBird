@@ -20,7 +20,7 @@ class MyModel {
         private const val MODEL_FILE_NAME = "movement_model.model"
         fun doStuff(context: Context) {
             val csvDataAggregator = CsvDataAggregator()
-//            csvDataAggregator.generateDataset(context, DATASET_FILE_NAME)
+            csvDataAggregator.generateDataset(context, DATASET_FILE_NAME)
             trainAndPredict(context)
         }
 
@@ -54,22 +54,21 @@ class MyModel {
         }
 
         // Hyper parameter Tuning
-        private fun tuneHyperParameters(trainDataset: Instances): Classifier {
+        private fun tuneHyperParameters(trainDataset: Instances): J48 {
             val paramSelection = CVParameterSelection()
             paramSelection.classifier = J48()
             paramSelection.numFolds = 10
-            paramSelection.addCVParameter("C 0.1 0.9 10")    // Confidence Factor
-//            paramSelection.addCVParameter("M 2 5 10")          // Minimum Number of Objects
-            //            paramSelection.addCVParameter("-U")                       // Unpruned
-//            paramSelection.addCVParameter("-R")                // Reduced Error Pruning
-
+            paramSelection.addCVParameter("C 0.001 0.5 10") // Confidence factor from 0.001 to 0.5 in 10 steps
+            paramSelection.addCVParameter("M 1 10 10") // MinNumObj from 1 to 10 in 10 steps
 
             paramSelection.buildClassifier(trainDataset)
 
-            val bestClassifier = paramSelection.classifier
-
             println("Best hyper parameters:")
             println(Utils.joinOptions(paramSelection.bestClassifierOptions))
+
+            val bestClassifier = J48()
+            bestClassifier.options = Utils.splitOptions(Utils.joinOptions(paramSelection.bestClassifierOptions))
+            bestClassifier.buildClassifier(trainDataset)
 
             return bestClassifier
         }
@@ -79,7 +78,7 @@ class MyModel {
             val eval = Evaluation(train)
             eval.crossValidateModel(classifier, train, 10, Random(1))
 
-            println("Cross-Validation Results:")
+            print("Cross-Validation Results:")
             println(eval.toSummaryString() + "\n")
             println(eval.toClassDetailsString() + "\n")
             println(eval.toMatrixString() + "\n\n")
@@ -90,7 +89,7 @@ class MyModel {
             val eval = Evaluation(test)
             eval.evaluateModel(classifier, test)
 
-            println("Evaluation on Test Set:")
+            print("Evaluation on Test Set:")
             println(eval.toSummaryString() + "\n")
             println(eval.toClassDetailsString() + "\n")
             println(eval.toMatrixString() + "\n")
