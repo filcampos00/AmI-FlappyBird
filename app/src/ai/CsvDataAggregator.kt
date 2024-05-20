@@ -20,8 +20,7 @@ class CsvDataAggregator {
         val negativeFolder = "sampledata/negative"
 
         aggregateCsvData(context, headers, datasetFileName, positiveFolder, label = true, createDatasetFile = true)
-        aggregateCsvData(context, headers, datasetFileName, negativeFolder, label = false, createDatasetFile = false
-        )
+        aggregateCsvData(context, headers, datasetFileName, negativeFolder, label = false, createDatasetFile = false)
     }
 
     // Read all CSV sample data files from the resources folder and aggregates them into 1 CSV file in the internal storage
@@ -75,9 +74,9 @@ class CsvDataAggregator {
             val xValues = group.map { it[4].toDouble() }
 
             // Calculate features for each axis
-            val zFeatures = computeAxisStatistics(zValues)
-            val yFeatures = computeAxisStatistics(yValues)
-            val xFeatures = computeAxisStatistics(xValues)
+            val zStatistics = computeAxisStatistics(zValues)
+            val yStatistics = computeAxisStatistics(yValues)
+            val xStatistics = computeAxisStatistics(xValues)
 
             // Calculate correlation coefficients
             val zyxCorr = computeCorrelationCoefficient(zValues, yValues)
@@ -85,7 +84,7 @@ class CsvDataAggregator {
             val yxzCorr = computeCorrelationCoefficient(yValues, xValues)
 
             // Combine all features into a single list
-            val features = zFeatures + yFeatures + xFeatures + listOf(zyxCorr, zxyCorr, yxzCorr)
+            val features = zStatistics + yStatistics + xStatistics + listOf(zyxCorr, zxyCorr, yxzCorr)
             featureList.add(features)
         }
 
