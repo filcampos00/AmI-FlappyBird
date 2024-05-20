@@ -3,12 +3,15 @@ package ai
 import android.content.Context
 import weka.classifiers.Classifier
 import weka.classifiers.Evaluation
-import weka.classifiers.meta.CVParameterSelection
+import weka.classifiers.functions.SMO
+import weka.classifiers.lazy.IBk
 import weka.classifiers.trees.J48
+import weka.classifiers.trees.RandomForest
 import weka.core.Instances
 import weka.core.SerializationHelper
-import weka.core.Utils
 import weka.core.converters.CSVLoader
+import weka.filters.Filter
+import weka.filters.unsupervised.attribute.Normalize
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -37,51 +40,65 @@ class MyModel {
             // Set class index to the label (last attribute)
             instances.setClassIndex(instances.numAttributes() - 1)
 
+            // Normalize features
+            val normalizedInstances = normalizeFeatures(instances)
+
             // Split dataset - 80% training, 20% testing
-            val trainSize = (instances.numInstances() * 0.8).toInt()
-            val testSize = instances.numInstances() - trainSize
-            instances.randomize(Random(1))
-            val trainDataset = Instances(instances, 0, trainSize)
-            val testDataset = Instances(instances, trainSize, testSize)
+            val trainSize = (normalizedInstances.numInstances() * 0.8).toInt()
+            val testSize = normalizedInstances.numInstances() - trainSize
+            normalizedInstances.randomize(Random(1))
+            val trainDataset = Instances(normalizedInstances, 0, trainSize)
+            val testDataset = Instances(normalizedInstances, trainSize, testSize)
 
-            // tune hyper parameters
-            val bestClassifier = tuneHyperParameters(trainDataset)
+            val bestClassifier = chooseBestClassifier(trainDataset)
+            println("Best classifier: ${bestClassifier.javaClass.simpleName}")
 
-            // Validate, predict, and save model
-//            validate(bestClassifier, trainDataset)
+            // predict and save model
             predict(bestClassifier, testDataset)
             saveModel(context, bestClassifier)
         }
 
-        // Hyper parameter Tuning
-        private fun tuneHyperParameters(trainDataset: Instances): J48 {
-            val paramSelection = CVParameterSelection()
-            paramSelection.classifier = J48()
-            paramSelection.numFolds = 10
-            paramSelection.addCVParameter("C 0.001 0.5 10") // Confidence factor from 0.001 to 0.5 in 10 steps
-            paramSelection.addCVParameter("M 1 10 10") // MinNumObj from 1 to 10 in 10 steps
+        private fun normalizeFeatures(instances: Instances): Instances {
+            val filter = Normalize()
+            filter.setInputFormat(instances)
+            return Filter.useFilter(instances, filter)
+        }
 
-            paramSelection.buildClassifier(trainDataset)
+        private fun chooseBestClassifier(trainDataset: Instances): Classifier {
+            val classifiers = listOf(
+                SMO(), // SVM
+                IBk(), // K-NN
+                J48(), // DT
+                RandomForest() // RF
+            )
 
-            println("Best hyper parameters:")
-            println(Utils.joinOptions(paramSelection.bestClassifierOptions))
+            var bestClassifier: Classifier? = null
+            var bestAccuracy = 0.0
 
-            val bestClassifier = J48()
-            bestClassifier.options = Utils.splitOptions(Utils.joinOptions(paramSelection.bestClassifierOptions))
-            bestClassifier.buildClassifier(trainDataset)
+            for (classifier in classifiers) {
+                classifier.buildClassifier(trainDataset)
+                val accuracy = validate(classifier, trainDataset)
 
-            return bestClassifier
+                if (accuracy > bestAccuracy) {
+                    bestClassifier = classifier
+                    bestAccuracy = accuracy
+                }
+            }
+
+            return bestClassifier ?: throw IllegalStateException("No classifier selected")
         }
 
         // Cross-validation
-        private fun validate(classifier: Classifier, train: Instances) {
+        private fun validate(classifier: Classifier, train: Instances): Double {
             val eval = Evaluation(train)
             eval.crossValidateModel(classifier, train, 10, Random(1))
 
-            print("Cross-Validation Results:")
-            println(eval.toSummaryString() + "\n")
-            println(eval.toClassDetailsString() + "\n")
-            println(eval.toMatrixString() + "\n\n")
+            print("Cross-Validation Results for ${classifier.javaClass.simpleName}:")
+            println("${eval.toSummaryString()}\n")
+            println("${eval.toClassDetailsString()}\n")
+            println("${eval.toMatrixString()}\n\n")
+
+            return eval.pctCorrect()
         }
 
         // Predict on testing set and evaluate
@@ -90,9 +107,9 @@ class MyModel {
             eval.evaluateModel(classifier, test)
 
             print("Evaluation on Test Set:")
-            println(eval.toSummaryString() + "\n")
-            println(eval.toClassDetailsString() + "\n")
-            println(eval.toMatrixString() + "\n")
+            println("${eval.toSummaryString()}\n")
+            println("${eval.toClassDetailsString()}\n")
+            println("${eval.toMatrixString()}\n")
         }
 
         // Save model to file
