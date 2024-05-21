@@ -58,6 +58,7 @@ dependencies {
     implementation 'com.github.doyaaaaaken:kotlin-csv-jvm:1.9.3'
     implementation files('libs/weka_3_7_13_mobile.jar')
     implementation 'androidx.multidex:multidex:2.0.1'
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
 }
 
 

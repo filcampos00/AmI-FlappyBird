@@ -22,9 +22,16 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.Toast
 import com.github.kostasdrakonakis.androidnavigator.IntentNavigator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : Activity() {
+    private val job = Job() // For coroutine management
+    private val scope = CoroutineScope(Dispatchers.Main + job) // Coroutine scope
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,8 +41,22 @@ class SplashActivity : Activity() {
         }
 
         findViewById<Button>(R.id.aiButton).setOnClickListener {
-            val boolean = MyModel.processAndSaveModel(context = this)
-            Toast.makeText(this, if (boolean) "Model saved" else "Model not saved", Toast.LENGTH_LONG).show()
+            scope.launch(Dispatchers.IO) {  // Run in background
+                val isSaved = MyModel.processAndSaveModel(context = applicationContext) // Use application context
+
+                withContext(Dispatchers.Main) { // Switch back to UI thread
+                    Toast.makeText(
+                        this@SplashActivity,
+                        if (isSaved) "Model saved successfully" else "Error saving model",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel() // Cancel coroutines on activity destroy
     }
 }
