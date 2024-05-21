@@ -21,10 +21,16 @@ class MyModel {
     companion object {
         private const val DATASET_FILE_NAME = "accelerometer_dataset.csv"
         private const val MODEL_FILE_NAME = "movement_model.model"
-        fun doStuff(context: Context) {
-            val csvDataAggregator = CsvDataAggregator()
-            csvDataAggregator.generateDataset(context, DATASET_FILE_NAME)
-            trainAndPredict(context)
+        fun processAndSaveModel(context: Context): Boolean {
+            return try {
+                val csvDataAggregator = CsvDataAggregator()
+                csvDataAggregator.generateDataset(context, DATASET_FILE_NAME)
+                trainAndPredict(context)
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
         }
 
         private fun trainAndPredict(context: Context) {

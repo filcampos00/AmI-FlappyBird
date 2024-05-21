@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
 import android.widget.Button
+import android.widget.Toast
 import com.github.kostasdrakonakis.androidnavigator.IntentNavigator
 
 @SuppressLint("CustomSplashScreen")
@@ -33,7 +34,8 @@ class SplashActivity : Activity() {
         }
 
         findViewById<Button>(R.id.aiButton).setOnClickListener {
-            MyModel.doStuff(context = this)
+            val boolean = MyModel.processAndSaveModel(context = this)
+            Toast.makeText(this, if (boolean) "Model saved" else "Model not saved", Toast.LENGTH_LONG).show()
         }
     }
 }
