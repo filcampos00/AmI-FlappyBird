@@ -46,28 +46,36 @@ class MyModel {
             // Set class index to the label (last attribute)
             instances.setClassIndex(instances.numAttributes() - 1)
 
-            // Normalize features
-            val normalizedInstances = normalizeFeatures(instances)
+            // Split dataset (80% training, 20% testing)
+            val trainSize = (instances.numInstances() * 0.8).toInt()
+            val testSize = instances.numInstances() - trainSize
+            instances.randomize(Random(1))
+            val trainDataset = Instances(instances, 0, trainSize)
+            val testDataset = Instances(instances, trainSize, testSize)
 
-            // Split dataset - 80% training, 20% testing
-            val trainSize = (normalizedInstances.numInstances() * 0.8).toInt()
-            val testSize = normalizedInstances.numInstances() - trainSize
-            normalizedInstances.randomize(Random(1))
-            val trainDataset = Instances(normalizedInstances, 0, trainSize)
-            val testDataset = Instances(normalizedInstances, trainSize, testSize)
+            // apply standard scaling to features
+            val (standardizedTrainDataset, standardizedTestDataset) = standardScaling(
+                trainDataset,
+                testDataset
+            )
 
-            val bestClassifier = chooseBestClassifier(trainDataset)
+            val bestClassifier = chooseBestClassifier(standardizedTrainDataset)
             println("Best classifier: ${bestClassifier.javaClass.simpleName}")
 
-            // predict and save model
-            predict(bestClassifier, testDataset)
+            // Predict and save model
+            predict(bestClassifier, standardizedTestDataset)
             saveModel(context, bestClassifier)
         }
 
-        private fun normalizeFeatures(instances: Instances): Instances {
+        private fun standardScaling(
+            trainDataset: Instances,
+            testDataset: Instances
+        ): Pair<Instances, Instances> {
             val filter = Normalize()
-            filter.setInputFormat(instances)
-            return Filter.useFilter(instances, filter)
+            filter.setInputFormat(trainDataset)
+            val standardizedTrainDataset = Filter.useFilter(trainDataset, filter)
+            val standardizedTestDataset = Filter.useFilter(testDataset, filter)
+            return Pair(standardizedTrainDataset, standardizedTestDataset)
         }
 
         private fun chooseBestClassifier(trainDataset: Instances): Classifier {
