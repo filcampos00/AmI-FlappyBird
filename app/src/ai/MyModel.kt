@@ -1,6 +1,7 @@
 package ai
 
 import android.content.Context
+import android.util.Log
 import weka.classifiers.Classifier
 import weka.classifiers.Evaluation
 import weka.classifiers.functions.SMO
@@ -21,6 +22,7 @@ class MyModel {
     companion object {
         private const val DATASET_FILE_NAME = "accelerometer_dataset.csv"
         private const val MODEL_FILE_NAME = "movement_model.model"
+
         fun processAndSaveModel(context: Context): Boolean {
             return try {
                 val csvDataAggregator = CsvDataAggregator()
@@ -28,71 +30,62 @@ class MyModel {
                 trainAndPredict(context)
                 true
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("MyModel", "Error processing and saving model", e)
                 false
             }
         }
 
         private fun trainAndPredict(context: Context) {
-            // Open dataset file from internal storage
-            val datasetFile = File(context.filesDir, DATASET_FILE_NAME)
-            val datasetInputStream = FileInputStream(datasetFile)
-
-            // Load CSV file using CSVLoader
-            val csvLoader = CSVLoader()
-            csvLoader.setSource(datasetInputStream)
-            val instances = csvLoader.dataSet
-
-            // Set class index to the label (last attribute)
+            val instances = loadDataset(context)
             instances.setClassIndex(instances.numAttributes() - 1)
-
-            // Split dataset (80% training, 20% testing)
-            val trainSize = (instances.numInstances() * 0.8).toInt()
-            val testSize = instances.numInstances() - trainSize
-            instances.randomize(Random(1))
-            val trainDataset = Instances(instances, 0, trainSize)
-            val testDataset = Instances(instances, trainSize, testSize)
-
-            // apply standard scaling to features
+            val (trainDataset, testDataset) = splitDataset(instances)
             val (standardizedTrainDataset, standardizedTestDataset) = standardScaling(
                 trainDataset,
                 testDataset
             )
 
             val bestClassifier = chooseBestClassifier(standardizedTrainDataset)
-            println("Best classifier: ${bestClassifier.javaClass.simpleName}")
+            Log.i("MyModel", "Best classifier: ${bestClassifier.javaClass.simpleName}")
 
-            // Predict and save model
             predict(bestClassifier, standardizedTestDataset)
             saveModel(context, bestClassifier)
+        }
+
+        private fun loadDataset(context: Context): Instances {
+            val datasetFile = File(context.filesDir, DATASET_FILE_NAME)
+            FileInputStream(datasetFile).use { fis ->
+                val csvLoader = CSVLoader().apply { setSource(fis) }
+                return csvLoader.dataSet
+            }
+        }
+
+        private fun splitDataset(instances: Instances): Pair<Instances, Instances> {
+            val trainSize = (instances.numInstances() * 0.8).toInt()
+            val testSize = instances.numInstances() - trainSize
+            instances.randomize(Random(1))
+            val trainDataset = Instances(instances, 0, trainSize)
+            val testDataset = Instances(instances, trainSize, testSize)
+            return Pair(trainDataset, testDataset)
         }
 
         private fun standardScaling(
             trainDataset: Instances,
             testDataset: Instances
         ): Pair<Instances, Instances> {
-            val filter = Normalize()
-            filter.setInputFormat(trainDataset)
+            val filter = Normalize().apply { setInputFormat(trainDataset) }
             val standardizedTrainDataset = Filter.useFilter(trainDataset, filter)
             val standardizedTestDataset = Filter.useFilter(testDataset, filter)
             return Pair(standardizedTrainDataset, standardizedTestDataset)
         }
 
         private fun chooseBestClassifier(trainDataset: Instances): Classifier {
-            val classifiers = listOf(
-                SMO(), // SVM
-                IBk(), // K-NN
-                J48(), // DT
-                RandomForest() // RF
-            )
-
+            val classifiers = listOf(SMO(), IBk(), J48(), RandomForest())
             var bestClassifier: Classifier? = null
             var bestAccuracy = 0.0
 
-            for (classifier in classifiers) {
+            classifiers.forEach { classifier ->
                 classifier.buildClassifier(trainDataset)
                 val accuracy = validate(classifier, trainDataset)
-
                 if (accuracy > bestAccuracy) {
                     bestClassifier = classifier
                     bestAccuracy = accuracy
@@ -102,37 +95,30 @@ class MyModel {
             return bestClassifier ?: throw IllegalStateException("No classifier selected")
         }
 
-        // Cross-validation
         private fun validate(classifier: Classifier, train: Instances): Double {
             val eval = Evaluation(train)
             eval.crossValidateModel(classifier, train, 10, Random(1))
-
-            print("Cross-Validation Results for ${classifier.javaClass.simpleName}:")
-            println("${eval.toSummaryString()}\n")
-            println("${eval.toClassDetailsString()}\n")
-            println("${eval.toMatrixString()}\n\n")
-
+            Log.i(
+                "MyModel",
+                "Cross-Validation Results for ${classifier.javaClass.simpleName}:\n${eval.toSummaryString()}\n${eval.toClassDetailsString()}\n${eval.toMatrixString()}"
+            )
             return eval.pctCorrect()
         }
 
-        // Predict on testing set and evaluate
         private fun predict(classifier: Classifier, test: Instances) {
             val eval = Evaluation(test)
             eval.evaluateModel(classifier, test)
-
-            print("Evaluation on Test Set:")
-            println("${eval.toSummaryString()}\n")
-            println("${eval.toClassDetailsString()}\n")
-            println("${eval.toMatrixString()}\n")
+            Log.i(
+                "MyModel",
+                "Evaluation on Test Set:\n${eval.toSummaryString()}\n${eval.toClassDetailsString()}\n${eval.toMatrixString()}"
+            )
         }
 
-        // Save model to file
         private fun saveModel(context: Context, classifier: Classifier) {
             val modelFile = File(context.filesDir, MODEL_FILE_NAME)
-            val fos = FileOutputStream(modelFile)
-            SerializationHelper.write(fos, classifier)
-            fos.close()
+            FileOutputStream(modelFile).use { fos ->
+                SerializationHelper.write(fos, classifier)
+            }
         }
     }
 }
-
