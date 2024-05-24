@@ -15,10 +15,12 @@
  */
 package com.kostasdrakonakis.flappybird
 
+import ai.MyModel
+import ai.PreprocessData
+import android.content.Context
+import android.util.Log
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.Input
-import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
@@ -27,13 +29,15 @@ import com.badlogic.gdx.math.Circle
 import com.badlogic.gdx.math.Intersector
 import com.badlogic.gdx.math.Rectangle
 import weka.classifiers.Classifier
-import weka.core.Instance
+import weka.core.Attribute
+import weka.core.DenseInstance
 import weka.core.Instances
 import weka.core.SerializationHelper
+import java.io.File
 import java.io.FileInputStream
 import java.util.*
 
-class FlappyBird : ApplicationAdapter(), InputProcessor {
+class FlappyBird(private val context: Context) : ApplicationAdapter() {
 
     private lateinit var batch: SpriteBatch
     private lateinit var background: Texture
@@ -65,7 +69,7 @@ class FlappyBird : ApplicationAdapter(), InputProcessor {
     private val tubeOffset = FloatArray(numberOfTubes)
     private var distanceBetweenTubes: Float = 0.toFloat()
 
-    private lateinit var accelerometerValues: FloatArray
+    private val accelerometerData = ArrayDeque<List<Double>>(100)
     private lateinit var model: Classifier
 
     override fun create() {
@@ -94,18 +98,8 @@ class FlappyBird : ApplicationAdapter(), InputProcessor {
         bottomTubeWidth = bottomTube.width
         bottomTubeHeight = bottomTube.height
 
-
-        // Initialize accelerometer values
-        accelerometerValues = FloatArray(3)
-
         // Load the trained model
-        model = loadModel(Gdx.files.internal("movement_model.model").file().path)
-
-        // Set input processor to this class
-        Gdx.input.inputProcessor = this
-        Gdx.input.isCatchBackKey = true
-        Gdx.input.isCatchMenuKey = true
-
+        model = loadModel(context)
 
         startGame()
     }
@@ -115,10 +109,7 @@ class FlappyBird : ApplicationAdapter(), InputProcessor {
         batch.draw(background, 0f, 0f, gdxWidth.toFloat(), gdxHeight.toFloat())
 
         if (gameState == 1) {
-            // update accelerometer values
-            accelerometerValues[0] = Gdx.input.accelerometerX
-            accelerometerValues[1] = Gdx.input.accelerometerY
-            accelerometerValues[2] = Gdx.input.accelerometerZ
+            collectAccelerometerData()
 
             // Use accelerometer data to predict if the bird should jump
             if (shouldJump()) {
@@ -132,10 +123,6 @@ class FlappyBird : ApplicationAdapter(), InputProcessor {
                 } else {
                     scoringTube = 0
                 }
-            }
-
-            if (Gdx.input.justTouched()) {
-                velocity = -30f
             }
 
             for (i in 0 until numberOfTubes) {
@@ -239,69 +226,63 @@ class FlappyBird : ApplicationAdapter(), InputProcessor {
         font.dispose()
     }
 
+    private fun collectAccelerometerData() {
+        // Add the new accelerometer reading to the end of the queue
+        accelerometerData.addLast(listOf(
+            Gdx.input.accelerometerZ.toDouble(),
+            Gdx.input.accelerometerY.toDouble(),
+            Gdx.input.accelerometerX.toDouble()
+        ))
+
+        // If the queue is too big, remove the oldest data
+        if (accelerometerData.size > 100) {
+            accelerometerData.removeFirst()
+        }
+    }
+
+    private fun shouldJump(): Boolean {
+        val featuresValues = PreprocessData.preprocessDataForGame(accelerometerData)
+        Log.d("ai", "Features values: $featuresValues")
+        val attributes = generateAttributes(featuresValues)
+        Log.d("ai", "Attributes: $attributes")
+        val dataset = Instances("dataset", attributes, 0)
+        dataset.setClassIndex(dataset.numAttributes() - 1)
+        Log.d("ai", "Dataset: $dataset")
+
+        val instance = DenseInstance(1.0, featuresValues.toDoubleArray())
+        dataset.add(instance)
+        instance.setDataset(dataset)
+        Log.d("ai", "Instance: $instance")
+
+        val prediction = model.classifyInstance(instance)
+        Log.d("ai", "Instance prediction: $prediction")
+        val shouldJump = prediction == 1.0
+        Log.d("ai", "Should jump: $shouldJump")
+        return shouldJump
+    }
+
+    private fun generateAttributes(features: List<Double>): ArrayList<Attribute> {
+        val label = listOf("true", "false")
+        val attributes: ArrayList<Attribute> = ArrayList()
+
+        for(i in features.indices) {
+            attributes.add(Attribute("feature${i+1}"))
+        }
+        attributes.add(Attribute("label", label))
+
+        return attributes
+    }
+
+    private fun loadModel(context: Context): Classifier {
+        val modelFile = File(context.filesDir, MyModel.MODEL_FILE_NAME)
+        FileInputStream(modelFile).use { fis ->
+            return SerializationHelper.read(fis) as Classifier
+        }
+    }
+
     companion object {
         private const val GRAVITY = 2f
         private const val TUBE_VELOCITY = 4f
         private const val GAP = 800f
-    }
-
-    private fun shouldJump(): Boolean {
-        // Create an instance from the accelerometer data
-        val instance = Instance(1.0, accelerometerValues)
-        instance.dataset = Instances("accelerometer_dataset", generateAttributes(), 0)
-        instance.setClassMissing()
-
-        // Use the model to predict
-        val result = model.classifyInstance(instance)
-        return result == 1.0 // Assuming 1.0 is the class value for jump
-    }
-
-    private fun generateAttributes(): ArrayList<weka.core.Attribute> {
-        val attributes = ArrayList<weka.core.Attribute>()
-        attributes.add(weka.core.Attribute("x"))
-        attributes.add(weka.core.Attribute("y"))
-        attributes.add(weka.core.Attribute("z"))
-        return attributes
-    }
-
-    private fun loadModel(modelPath: String): Classifier {
-        val inputStream = FileInputStream(modelPath)
-        return SerializationHelper.read(inputStream) as Classifier
-    }
-
-    override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-        return false
-    }
-
-    override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-        return false
-    }
-
-    override fun touchCancelled(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-        return false
-    }
-
-    override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
-        return false
-    }
-
-    override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
-        return false
-    }
-
-    override fun scrolled(amountX: Float, amountY: Float): Boolean {
-        return false
-    }
-
-    override fun keyDown(keycode: Int): Boolean {
-        return false
-    }
-
-    override fun keyUp(keycode: Int): Boolean {
-        return false
-    }
-
-    override fun keyTyped(character: Char): Boolean {
-        return false
     }
 }

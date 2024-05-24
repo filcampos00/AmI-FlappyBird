@@ -11,8 +11,6 @@ import weka.classifiers.trees.RandomForest
 import weka.core.Instances
 import weka.core.SerializationHelper
 import weka.core.converters.CSVLoader
-import weka.filters.Filter
-import weka.filters.unsupervised.attribute.Normalize
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -21,7 +19,7 @@ import java.util.Random
 class MyModel {
     companion object {
         private const val DATASET_FILE_NAME = "accelerometer_dataset.csv"
-        private const val MODEL_FILE_NAME = "movement_model.model"
+        const val MODEL_FILE_NAME = "movement_model.model"
 
         fun processAndSaveModel(context: Context): Boolean {
             return try {
@@ -30,7 +28,7 @@ class MyModel {
                 trainAndPredict(context)
                 true
             } catch (e: Exception) {
-                Log.e("MyModel", "Error processing and saving model", e)
+                Log.e("ai", "Error processing and saving model", e)
                 false
             }
         }
@@ -39,15 +37,15 @@ class MyModel {
             val instances = loadDataset(context)
             instances.setClassIndex(instances.numAttributes() - 1)
             val (trainDataset, testDataset) = splitDataset(instances)
-            val (standardizedTrainDataset, standardizedTestDataset) = standardScaling(
-                trainDataset,
-                testDataset
-            )
+//            val (standardizedTrainDataset, standardizedTestDataset) = PreprocessData.standardScaling(
+//                trainDataset,
+//                testDataset
+//            )
 
-            val bestClassifier = chooseBestClassifier(standardizedTrainDataset)
-            Log.i("MyModel", "Best classifier: ${bestClassifier.javaClass.simpleName}")
+            val bestClassifier = chooseBestClassifier(trainDataset)
+            Log.i("ai", "Best classifier: ${bestClassifier.javaClass.simpleName}")
 
-            predict(bestClassifier, standardizedTestDataset)
+            predict(bestClassifier, testDataset)
             saveModel(context, bestClassifier)
         }
 
@@ -68,18 +66,9 @@ class MyModel {
             return Pair(trainDataset, testDataset)
         }
 
-        private fun standardScaling(
-            trainDataset: Instances,
-            testDataset: Instances
-        ): Pair<Instances, Instances> {
-            val filter = Normalize().apply { setInputFormat(trainDataset) }
-            val standardizedTrainDataset = Filter.useFilter(trainDataset, filter)
-            val standardizedTestDataset = Filter.useFilter(testDataset, filter)
-            return Pair(standardizedTrainDataset, standardizedTestDataset)
-        }
-
         private fun chooseBestClassifier(trainDataset: Instances): Classifier {
-            val classifiers = listOf(SMO(), IBk(), J48(), RandomForest())
+//            val classifiers = listOf(SMO(), IBk(), J48(), RandomForest())
+            val classifiers = listOf(J48(), RandomForest())
             var bestClassifier: Classifier? = null
             var bestAccuracy = 0.0
 
@@ -99,7 +88,7 @@ class MyModel {
             val eval = Evaluation(train)
             eval.crossValidateModel(classifier, train, 10, Random(1))
             Log.i(
-                "MyModel",
+                "ai",
                 "Cross-Validation Results for ${classifier.javaClass.simpleName}:\n${eval.toSummaryString()}\n${eval.toClassDetailsString()}\n${eval.toMatrixString()}"
             )
             return eval.pctCorrect()
@@ -109,7 +98,7 @@ class MyModel {
             val eval = Evaluation(test)
             eval.evaluateModel(classifier, test)
             Log.i(
-                "MyModel",
+                "ai",
                 "Evaluation on Test Set:\n${eval.toSummaryString()}\n${eval.toClassDetailsString()}\n${eval.toMatrixString()}"
             )
         }

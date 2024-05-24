@@ -25,6 +25,6 @@ import com.github.kostasdrakonakis.annotation.Intent
 class MainActivity : AndroidApplication() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        initialize(FlappyBird(), AndroidApplicationConfiguration())
+        initialize(FlappyBird(this), AndroidApplicationConfiguration())
     }
 }

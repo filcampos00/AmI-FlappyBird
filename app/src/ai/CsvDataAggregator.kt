@@ -6,7 +6,6 @@ import com.github.doyaaaaaken.kotlincsv.dsl.csvWriter
 import java.io.File
 import java.math.RoundingMode
 import java.text.DecimalFormat
-import kotlin.math.sqrt
 
 class CsvDataAggregator {
     internal fun generateDataset(context: Context, datasetFileName: String) {
@@ -49,7 +48,7 @@ class CsvDataAggregator {
             val groupedRows = csvRows.drop(1).chunked(100) // Drop header and create 100-row chunks
             val rowsFeatures = extractFeatures(groupedRows)
 
-            // Prepare dataset rows to be written
+            // Convert each element to string and append the label
             val datasetRows = rowsFeatures.map { row -> row.map { formatFeature(it) } + label.toString() }
             csvWriter().writeAll(datasetRows, datasetFile, append = true)
         }
@@ -68,20 +67,21 @@ class CsvDataAggregator {
     private fun extractFeatures(groupedRows: List<List<List<String>>>): List<List<Double>> {
         val featureList = mutableListOf<List<Double>>()
 
+        // Iterate through each group of rows and extract features
         for (group in groupedRows) {
             val zValues = group.map { it[2].toDouble() }
             val yValues = group.map { it[3].toDouble() }
             val xValues = group.map { it[4].toDouble() }
 
             // Calculate features for each axis
-            val zStatistics = computeAxisStatistics(zValues)
-            val yStatistics = computeAxisStatistics(yValues)
-            val xStatistics = computeAxisStatistics(xValues)
+            val zStatistics = PreprocessData.computeAxisStatistics(zValues)
+            val yStatistics = PreprocessData.computeAxisStatistics(yValues)
+            val xStatistics = PreprocessData.computeAxisStatistics(xValues)
 
             // Calculate correlation coefficients
-            val zyxCorr = computeCorrelationCoefficient(zValues, yValues)
-            val zxyCorr = computeCorrelationCoefficient(zValues, xValues)
-            val yxzCorr = computeCorrelationCoefficient(yValues, xValues)
+            val zyxCorr = PreprocessData.computeCorrelationCoefficient(zValues, yValues)
+            val zxyCorr = PreprocessData.computeCorrelationCoefficient(zValues, xValues)
+            val yxzCorr = PreprocessData.computeCorrelationCoefficient(yValues, xValues)
 
             // Combine all features into a single list
             val features = zStatistics + yStatistics + xStatistics + listOf(zyxCorr, zxyCorr, yxzCorr)
@@ -89,41 +89,6 @@ class CsvDataAggregator {
         }
 
         return featureList
-    }
-
-    // Compute the mean, standard deviation, median, maximum, minimum, and range for each axis
-    private fun computeAxisStatistics(values: List<Double>): List<Double> {
-        val mean = values.average()
-        val stdDev = sqrt(values.map { (it - mean) * (it - mean) }.average())
-        val median = calculateMedian(values)
-        val max = values.maxOrNull() ?: Double.NaN
-        val min = values.minOrNull() ?: Double.NaN
-        val range = max - min
-
-        return listOf(mean, stdDev, median, max, min, range)
-    }
-
-    // Calculate the median of a list of values
-    private fun calculateMedian(values: List<Double>): Double {
-        val sortedValues = values.sorted()
-        return if (sortedValues.size % 2 == 0) {
-            (sortedValues[sortedValues.size / 2] + sortedValues[sortedValues.size / 2 - 1]) / 2
-        } else {
-            sortedValues[sortedValues.size / 2]
-        }
-    }
-
-    // Calculate the Pearson correlation coefficient between two lists of values
-    private fun computeCorrelationCoefficient(
-        values1: List<Double>,
-        values2: List<Double>
-    ): Double {
-        val mean1 = values1.average()
-        val mean2 = values2.average()
-        val numerator = values1.zip(values2).sumOf { (v1, v2) -> (v1 - mean1) * (v2 - mean2) }
-        val denominator = sqrt(values1.sumOf { (it - mean1) * (it - mean1) } * values2.sumOf { (it - mean2) * (it - mean2) })
-
-        return if (denominator == 0.0) 0.0 else numerator / denominator
     }
 
     // Format the feature values to 6 decimal places
