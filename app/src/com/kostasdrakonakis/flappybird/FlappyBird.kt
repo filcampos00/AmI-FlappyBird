@@ -15,13 +15,10 @@
  */
 package com.kostasdrakonakis.flappybird
 
+import ai.KalmanFilter
 import ai.MyModel
 import ai.PreprocessData
 import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.util.Log
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
@@ -42,7 +39,7 @@ import java.io.FileInputStream
 import java.util.ArrayDeque
 import java.util.Random
 
-class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEventListener {
+class FlappyBird(private val context: Context) : ApplicationAdapter() {
 
     private lateinit var batch: SpriteBatch
     private lateinit var background: Texture
@@ -75,8 +72,9 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
     private var distanceBetweenTubes: Float = 0.toFloat()
 
     private val accelerometerData = ArrayDeque<List<Double>>(100)
-    private lateinit var sensorManager: SensorManager
-    private lateinit var accelerometerSensor: Sensor
+    private val kalmanFilterX = KalmanFilter(0.1f, 0.1f)
+    private val kalmanFilterY = KalmanFilter(0.1f, 0.1f)
+    private val kalmanFilterZ = KalmanFilter(0.1f, 0.1f)
     private lateinit var model: Classifier
 
 
@@ -106,22 +104,9 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
         bottomTubeWidth = bottomTube.width
         bottomTubeHeight = bottomTube.height
 
-
-        sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)!!
         model = loadModel(context)
 
         startGame()
-    }
-
-    override fun resume() {
-        super.resume()
-        sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
-    }
-
-    override fun pause() {
-        super.pause()
-        sensorManager.unregisterListener(this)
     }
 
     override fun render() {
@@ -129,6 +114,9 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
         batch.draw(background, 0f, 0f, gdxWidth.toFloat(), gdxHeight.toFloat())
 
         if (gameState == 1) {
+            if (shouldJump())
+                velocity = -30f
+
             if (tubeX[scoringTube] < gdxWidth / 2) {
                 score++
                 if (scoringTube < numberOfTubes - 1) {
@@ -239,8 +227,33 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
         font.dispose()
     }
 
+    private fun collectAccelerometerData() {
+        val z = Gdx.input.accelerometerZ
+        val y = Gdx.input.accelerometerY
+        val x = Gdx.input.accelerometerX
+
+        Log.d("data", "Raw accelerometer data: $z, $y, $x")
+
+        // low-pass filter
+//        val filteredAccelerometerData = PreprocessData.lowPassFilter(z, y, x)
+        // Kalman filter
+        val filteredAccelerometerData = listOf(
+            kalmanFilterZ.filter(z).toDouble(),
+            kalmanFilterY.filter(y).toDouble(),
+            kalmanFilterX.filter(x).toDouble()
+        )
+        Log.d("data", "Filtered accelerometer data: $filteredAccelerometerData")
+
+        accelerometerData.addLast(filteredAccelerometerData)
+
+        // If the queue is too big, remove the oldest data
+        if (accelerometerData.size > 100) {
+            accelerometerData.removeFirst()
+        }
+    }
+
     private fun shouldJump(): Boolean {
-//        collectAccelerometerData()
+        collectAccelerometerData()
 
         val featuresValues = PreprocessData.preprocessDataForGame(accelerometerData)
         Log.d("ai", "Features values: $featuresValues")
@@ -279,32 +292,6 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
         FileInputStream(modelFile).use { fis ->
             return SerializationHelper.read(fis) as Classifier
         }
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event!!.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION) {
-            if (gameState == 1) {
-                accelerometerData.addLast(
-                    listOf(
-                        event.values[0].toDouble(),
-                        event.values[1].toDouble(),
-                        event.values[2].toDouble()
-                    )
-                )
-
-                // If the queue is too big, remove the oldest data
-                if (accelerometerData.size > 100) {
-                    accelerometerData.removeFirst()
-                }
-
-                if (shouldJump())
-                    velocity = -30f
-            }
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        return
     }
 
     companion object {

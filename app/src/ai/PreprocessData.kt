@@ -78,6 +78,22 @@ class PreprocessData {
             return df.format(value)
         }
 
+        fun lowPassFilter(z: Float, y: Float, x: Float): List<Double> {
+            val alpha = 10f
+            val gravity = FloatArray(3)
+            val linearAcceleration = FloatArray(3)
+
+            gravity[0] = alpha * gravity[0] + (1 - alpha) * z
+            gravity[1] = alpha * gravity[1] + (1 - alpha) * y
+            gravity[2] = alpha * gravity[2] + (1 - alpha) * x
+
+            linearAcceleration[0] = z - gravity[0]
+            linearAcceleration[1] = y - gravity[1]
+            linearAcceleration[2] = x - gravity[2]
+
+            return linearAcceleration.map { it.toDouble() }
+        }
+
 //        fun standardScaling(
 //            trainDataset: Instances,
 //            testDataset: Instances
