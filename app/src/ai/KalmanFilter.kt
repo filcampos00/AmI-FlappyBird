@@ -1,0 +1,39 @@
+package ai
+
+// code from: https://github.com/christianb/Kalman-Filter/blob/master/KalmanFilter.kt
+class KalmanFilter(private val R: Float,
+                   private val Q: Float,
+                   private val A: Float = 1.0f,
+                   private val B: Float = 0.0f,
+                   private val C: Float = 1.0f) {
+
+    private var x: Float? = null
+    private var cov: Float = 0.0f
+
+    private fun square(x: Float) = x * x
+
+    private fun predict(x: Float, u: Float): Float = (A * x) + (B * u)
+
+    private fun uncertainty(): Float = (square(A) * cov) + R
+
+    fun filter(signal: Float, u: Float = 0.0f): Float {
+        val x: Float? = this.x
+
+        if (x == null) {
+            this.x = (1 / C) * signal
+            cov = square(1 / C) * Q
+        } else {
+            val prediction: Float = predict(x, u)
+            val uncertainty: Float = uncertainty()
+
+            // kalman gain
+            val kGain: Float = uncertainty * C * (1 / ((square(C) * uncertainty) + Q))
+
+            // correction
+            this.x = prediction + kGain * (signal - (C * prediction))
+            cov = uncertainty - (kGain * C * uncertainty)
+        }
+
+        return this.x!!
+    }
+}

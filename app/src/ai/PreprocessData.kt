@@ -1,9 +1,7 @@
 package ai
 
-import android.util.Log
-import weka.core.Instances
-import weka.filters.Filter
-import weka.filters.unsupervised.attribute.Normalize
+import java.math.RoundingMode
+import java.text.DecimalFormat
 import java.util.ArrayDeque
 import kotlin.math.sqrt
 
@@ -12,6 +10,7 @@ class PreprocessData {
         // z, y, x
         fun preprocessDataForGame(accelerometerData: ArrayDeque<List<Double>>): List<Double> {
             val features = extractFeatures(accelerometerData)
+            features.map { formatFeature(it) }
             return features
         }
 
@@ -70,6 +69,13 @@ class PreprocessData {
                 sqrt(values1.sumOf { (it - mean1) * (it - mean1) } * values2.sumOf { (it - mean2) * (it - mean2) })
 
             return if (denominator == 0.0) 0.0 else numerator / denominator
+        }
+
+        // Format the feature values to 6 decimal places
+        fun formatFeature(value: Double): String {
+            val df = DecimalFormat("#.######")
+            df.roundingMode = RoundingMode.HALF_UP
+            return df.format(value)
         }
 
 //        fun standardScaling(

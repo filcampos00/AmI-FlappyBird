@@ -4,8 +4,6 @@ import android.content.Context
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.github.doyaaaaaken.kotlincsv.dsl.csvWriter
 import java.io.File
-import java.math.RoundingMode
-import java.text.DecimalFormat
 
 class CsvDataAggregator {
     internal fun generateDataset(context: Context, datasetFileName: String) {
@@ -49,7 +47,7 @@ class CsvDataAggregator {
             val rowsFeatures = extractFeatures(groupedRows)
 
             // Convert each element to string and append the label
-            val datasetRows = rowsFeatures.map { row -> row.map { formatFeature(it) } + label.toString() }
+            val datasetRows = rowsFeatures.map { row -> row.map { PreprocessData.formatFeature(it) } + label.toString() }
             csvWriter().writeAll(datasetRows, datasetFile, append = true)
         }
     }
@@ -89,12 +87,5 @@ class CsvDataAggregator {
         }
 
         return featureList
-    }
-
-    // Format the feature values to 6 decimal places
-    private fun formatFeature(value: Double): String {
-        val df = DecimalFormat("#.######")
-        df.roundingMode = RoundingMode.HALF_UP
-        return df.format(value)
     }
 }

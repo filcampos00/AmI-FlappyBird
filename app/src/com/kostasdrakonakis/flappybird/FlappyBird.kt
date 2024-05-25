@@ -18,6 +18,10 @@ package com.kostasdrakonakis.flappybird
 import ai.MyModel
 import ai.PreprocessData
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.util.Log
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
@@ -35,9 +39,10 @@ import weka.core.Instances
 import weka.core.SerializationHelper
 import java.io.File
 import java.io.FileInputStream
-import java.util.*
+import java.util.ArrayDeque
+import java.util.Random
 
-class FlappyBird(private val context: Context) : ApplicationAdapter() {
+class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEventListener {
 
     private lateinit var batch: SpriteBatch
     private lateinit var background: Texture
@@ -70,7 +75,10 @@ class FlappyBird(private val context: Context) : ApplicationAdapter() {
     private var distanceBetweenTubes: Float = 0.toFloat()
 
     private val accelerometerData = ArrayDeque<List<Double>>(100)
+    private lateinit var sensorManager: SensorManager
+    private lateinit var accelerometerSensor: Sensor
     private lateinit var model: Classifier
+
 
     override fun create() {
         batch = SpriteBatch()
@@ -98,10 +106,22 @@ class FlappyBird(private val context: Context) : ApplicationAdapter() {
         bottomTubeWidth = bottomTube.width
         bottomTubeHeight = bottomTube.height
 
-        // Load the trained model
+
+        sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)!!
         model = loadModel(context)
 
         startGame()
+    }
+
+    override fun resume() {
+        super.resume()
+        sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
+    }
+
+    override fun pause() {
+        super.pause()
+        sensorManager.unregisterListener(this)
     }
 
     override fun render() {
@@ -109,13 +129,6 @@ class FlappyBird(private val context: Context) : ApplicationAdapter() {
         batch.draw(background, 0f, 0f, gdxWidth.toFloat(), gdxHeight.toFloat())
 
         if (gameState == 1) {
-            collectAccelerometerData()
-
-            // Use accelerometer data to predict if the bird should jump
-            if (shouldJump()) {
-                velocity = -30f
-            }
-
             if (tubeX[scoringTube] < gdxWidth / 2) {
                 score++
                 if (scoringTube < numberOfTubes - 1) {
@@ -226,28 +239,16 @@ class FlappyBird(private val context: Context) : ApplicationAdapter() {
         font.dispose()
     }
 
-    private fun collectAccelerometerData() {
-        // Add the new accelerometer reading to the end of the queue
-        accelerometerData.addLast(listOf(
-            Gdx.input.accelerometerZ.toDouble(),
-            Gdx.input.accelerometerY.toDouble(),
-            Gdx.input.accelerometerX.toDouble()
-        ))
-
-        // If the queue is too big, remove the oldest data
-        if (accelerometerData.size > 100) {
-            accelerometerData.removeFirst()
-        }
-    }
-
     private fun shouldJump(): Boolean {
+//        collectAccelerometerData()
+
         val featuresValues = PreprocessData.preprocessDataForGame(accelerometerData)
         Log.d("ai", "Features values: $featuresValues")
         val attributes = generateAttributes(featuresValues)
         Log.d("ai", "Attributes: $attributes")
         val dataset = Instances("dataset", attributes, 0)
         dataset.setClassIndex(dataset.numAttributes() - 1)
-        Log.d("ai", "Dataset: $dataset")
+//        Log.d("ai", "Dataset: $dataset")
 
         val instance = DenseInstance(1.0, featuresValues.toDoubleArray())
         dataset.add(instance)
@@ -265,8 +266,8 @@ class FlappyBird(private val context: Context) : ApplicationAdapter() {
         val label = listOf("true", "false")
         val attributes: ArrayList<Attribute> = ArrayList()
 
-        for(i in features.indices) {
-            attributes.add(Attribute("feature${i+1}"))
+        for (i in features.indices) {
+            attributes.add(Attribute("feature${i + 1}"))
         }
         attributes.add(Attribute("label", label))
 
@@ -278,6 +279,32 @@ class FlappyBird(private val context: Context) : ApplicationAdapter() {
         FileInputStream(modelFile).use { fis ->
             return SerializationHelper.read(fis) as Classifier
         }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event!!.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION) {
+            if (gameState == 1) {
+                accelerometerData.addLast(
+                    listOf(
+                        event.values[0].toDouble(),
+                        event.values[1].toDouble(),
+                        event.values[2].toDouble()
+                    )
+                )
+
+                // If the queue is too big, remove the oldest data
+                if (accelerometerData.size > 100) {
+                    accelerometerData.removeFirst()
+                }
+
+                if (shouldJump())
+                    velocity = -30f
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        return
     }
 
     companion object {
