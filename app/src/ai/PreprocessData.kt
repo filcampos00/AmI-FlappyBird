@@ -1,5 +1,13 @@
 package ai
 
+import android.content.Context
+import android.util.Log
+import weka.core.Instances
+import weka.filters.Filter
+import weka.filters.unsupervised.attribute.Normalize
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.util.ArrayDeque
@@ -7,11 +15,15 @@ import kotlin.math.sqrt
 
 class PreprocessData {
     companion object {
-        // z, y, x
-        fun preprocessDataForGame(accelerometerData: ArrayDeque<List<Double>>): List<Double> {
+        private const val NORMALIZATION_PARAMS_FILE_NAME = "normalization_params.txt"
+        private lateinit var normalizationParams: MutableList<Pair<Double, Double>>
+        private var paramsLoaded = false
+
+        fun preprocessDataForGame(context: Context, accelerometerData: ArrayDeque<List<Double>>): List<Double> {
             val features = extractFeatures(accelerometerData)
-            features.map { formatFeature(it) }
-            return features
+            val normalizedFeatures = normalizeRealTime(context, features)
+            // round to 6 decimal places
+            return normalizedFeatures.map { it.toBigDecimal().setScale(6, RoundingMode.HALF_UP).toDouble() }
         }
 
         private fun extractFeatures(accelerometerData: ArrayDeque<List<Double>>): List<Double> {
@@ -78,14 +90,55 @@ class PreprocessData {
             return df.format(value)
         }
 
-//        fun standardScaling(
-//            trainDataset: Instances,
-//            testDataset: Instances
-//        ): Pair<Instances, Instances> {
-//            val filter = Normalize().apply { setInputFormat(trainDataset) }
-//            val standardizedTrainDataset = Filter.useFilter(trainDataset, filter)
-//            val standardizedTestDataset = Filter.useFilter(testDataset, filter)
-//            return Pair(standardizedTrainDataset, standardizedTestDataset)
-//        }
+        fun normalization(context: Context, trainDataset: Instances, testDataset: Instances): Pair<Instances, Instances> {
+            val filter = Normalize().apply { setInputFormat(trainDataset) }
+            val standardizedTrainDataset = Filter.useFilter(trainDataset, filter)
+            val standardizedTestDataset = Filter.useFilter(testDataset, filter)
+
+            // Save normalization parameters (min and max for each attribute)
+            saveNormalizationParameters(context, filter)
+
+            return Pair(standardizedTrainDataset, standardizedTestDataset)
+        }
+
+        private fun saveNormalizationParameters(context: Context, filter: Normalize) {
+            val minArray = filter.minArray
+            val maxArray = filter.maxArray
+
+            val file = File(context.filesDir, NORMALIZATION_PARAMS_FILE_NAME)
+            FileOutputStream(file).use { fos ->
+                for (i in minArray.indices) {
+                    fos.write("${minArray[i]},${maxArray[i]}\n".toByteArray())
+                }
+            }
+        }
+
+        // Normalizing features in real-time
+        private fun normalizeRealTime(context: Context, features: List<Double>): List<Double> {
+            if (!paramsLoaded) {
+                loadNormalizationParameters(context)
+            }
+
+            return features.mapIndexed { index, value ->
+                val (min, max) = normalizationParams[index]
+                (value - min) / (max - min)
+            }
+        }
+
+        private fun loadNormalizationParameters(context: Context) {
+            if (paramsLoaded) return
+
+            val file = File(context.filesDir, NORMALIZATION_PARAMS_FILE_NAME)
+            normalizationParams = mutableListOf()
+
+            FileInputStream(file).use { fis ->
+                fis.bufferedReader().forEachLine { line ->
+                    val (min, max) = line.split(",").map { it.toDouble() }
+                    normalizationParams.add(Pair(min, max))
+                }
+            }
+            Log.i("ai", "Normalization parameters loaded: $normalizationParams")
+            paramsLoaded = true
+        }
     }
 }

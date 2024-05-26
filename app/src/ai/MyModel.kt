@@ -37,15 +37,16 @@ class MyModel {
             val instances = loadDataset(context)
             instances.setClassIndex(instances.numAttributes() - 1)
             val (trainDataset, testDataset) = splitDataset(instances)
-//            val (standardizedTrainDataset, standardizedTestDataset) = PreprocessData.standardScaling(
-//                trainDataset,
-//                testDataset
-//            )
+            val (standardizedTrainDataset, standardizedTestDataset) = PreprocessData.normalization(
+                context,
+                trainDataset,
+                testDataset
+            )
 
-            val bestClassifier = chooseBestClassifier(trainDataset)
+            val bestClassifier = chooseBestClassifier(standardizedTrainDataset)
             Log.i("ai", "Best classifier: ${bestClassifier.javaClass.simpleName}")
 
-            predict(bestClassifier, testDataset)
+            predict(bestClassifier, standardizedTestDataset)
             saveModel(context, bestClassifier)
         }
 
@@ -67,8 +68,8 @@ class MyModel {
         }
 
         private fun chooseBestClassifier(trainDataset: Instances): Classifier {
-//            val classifiers = listOf(SMO(), IBk(), J48(), RandomForest())
-            val classifiers = listOf(J48(), RandomForest())
+            val classifiers = listOf(SMO(), IBk(), J48(), RandomForest())
+//            val classifiers = listOf(J48(), RandomForest())
             var bestClassifier: Classifier? = null
             var bestAccuracy = 0.0
 

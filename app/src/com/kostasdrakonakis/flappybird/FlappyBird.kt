@@ -240,9 +240,7 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
     }
 
     private fun shouldJump(): Boolean {
-//        collectAccelerometerData()
-
-        val featuresValues = PreprocessData.preprocessDataForGame(accelerometerData)
+        val featuresValues = PreprocessData.preprocessDataForGame(context, accelerometerData)
         Log.d("ai", "Features values: $featuresValues")
         val attributes = generateAttributes(featuresValues)
         Log.d("ai", "Attributes: $attributes")
