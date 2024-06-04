@@ -109,19 +109,17 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
 
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)!!
+        sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
+        Log.d("SensorStatus", "Sensor listener registered")
         model = loadModel(context)
 
         startGame()
     }
 
-    override fun resume() {
-        super.resume()
-        sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
-    }
-
     override fun pause() {
         super.pause()
         sensorManager.unregisterListener(this)
+        Log.d("SensorStatus", "Sensor listener unregistered")
     }
 
     override fun render() {
