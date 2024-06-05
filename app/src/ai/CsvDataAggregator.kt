@@ -43,11 +43,13 @@ class CsvDataAggregator {
 
             // Read the CSV file and process the data
             val csvRows = csvReader().readAll(inputStream)
-            val groupedRows = csvRows.drop(1).chunked(100) // Drop header and create 100-row chunks
-            val rowsFeatures = extractFeatures(groupedRows)
+            val groupedRows =
+                csvRows.drop(1).chunked(ROWS_PER_CHUNK) // Drop header and create N-row chunks
+            val rowsFeatures = PreprocessData.extractFeatures(groupedRows)
 
             // Convert each element to string and append the label
-            val datasetRows = rowsFeatures.map { row -> row.map { PreprocessData.formatFeature(it) } + label.toString() }
+            val datasetRows =
+                rowsFeatures.map { row -> row.map { PreprocessData.formatFeature(it) } + label.toString() }
             csvWriter().writeAll(datasetRows, datasetFile, append = true)
         }
     }
@@ -61,31 +63,8 @@ class CsvDataAggregator {
         csvWriter().writeAll(listOf(headers), datasetFile, append = false)
     }
 
-    // Extract features from the CSV data
-    private fun extractFeatures(groupedRows: List<List<List<String>>>): List<List<Double>> {
-        val featureList = mutableListOf<List<Double>>()
-
-        // Iterate through each group of rows and extract features
-        for (group in groupedRows) {
-            val zValues = group.map { it[2].toDouble() }
-            val yValues = group.map { it[3].toDouble() }
-            val xValues = group.map { it[4].toDouble() }
-
-            // Calculate features for each axis
-            val zStatistics = PreprocessData.computeAxisStatistics(zValues)
-            val yStatistics = PreprocessData.computeAxisStatistics(yValues)
-            val xStatistics = PreprocessData.computeAxisStatistics(xValues)
-
-            // Calculate correlation coefficients
-            val zyxCorr = PreprocessData.computeCorrelationCoefficient(zValues, yValues)
-            val zxyCorr = PreprocessData.computeCorrelationCoefficient(zValues, xValues)
-            val yxzCorr = PreprocessData.computeCorrelationCoefficient(yValues, xValues)
-
-            // Combine all features into a single list
-            val features = zStatistics + yStatistics + xStatistics + listOf(zyxCorr, zxyCorr, yxzCorr)
-            featureList.add(features)
-        }
-
-        return featureList
+    companion object {
+        // time window
+        private const val ROWS_PER_CHUNK = 800
     }
 }

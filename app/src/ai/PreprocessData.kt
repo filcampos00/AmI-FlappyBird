@@ -26,6 +26,34 @@ class PreprocessData {
             return normalizedFeatures.map { it.toBigDecimal().setScale(6, RoundingMode.HALF_UP).toDouble() }
         }
 
+        // Extract features from the CSV data
+        fun extractFeatures(groupedRows: List<List<List<String>>>): List<List<Double>> {
+            val featureList = mutableListOf<List<Double>>()
+
+            // Iterate through each group of rows and extract features
+            for (group in groupedRows) {
+                val zValues = group.map { it[2].toDouble() }
+                val yValues = group.map { it[3].toDouble() }
+                val xValues = group.map { it[4].toDouble() }
+
+                // Calculate features for each axis
+                val zStatistics = computeAxisStatistics(zValues)
+                val yStatistics = computeAxisStatistics(yValues)
+                val xStatistics = computeAxisStatistics(xValues)
+
+                // Calculate correlation coefficients
+                val zyxCorr = computeCorrelationCoefficient(zValues, yValues)
+                val zxyCorr = computeCorrelationCoefficient(zValues, xValues)
+                val yxzCorr = computeCorrelationCoefficient(yValues, xValues)
+
+                // Combine all features into a single list
+                val features = zStatistics + yStatistics + xStatistics + listOf(zyxCorr, zxyCorr, yxzCorr)
+                featureList.add(features)
+            }
+
+            return featureList
+        }
+
         private fun extractFeatures(accelerometerData: ArrayDeque<List<Double>>): List<Double> {
             val zValues = accelerometerData.map { it[0] }
             val yValues = accelerometerData.map { it[1] }

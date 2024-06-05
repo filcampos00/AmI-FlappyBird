@@ -41,8 +41,12 @@ class SplashActivity : Activity() {
         }
 
         findViewById<Button>(R.id.aiButton).setOnClickListener {
+            Toast.makeText(this@SplashActivity, "Training model...", Toast.LENGTH_LONG).show()
+
             scope.launch(Dispatchers.IO) {  // Run in background
-                val isSaved = MyModel.processAndSaveModel(context = applicationContext) // Use application context
+
+                val isSaved =
+                    MyModel.processAndSaveModel(context = applicationContext) // Use application context
 
                 withContext(Dispatchers.Main) { // Switch back to UI thread
                     Toast.makeText(

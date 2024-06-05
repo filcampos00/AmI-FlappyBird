@@ -74,7 +74,7 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
     private val tubeOffset = FloatArray(numberOfTubes)
     private var distanceBetweenTubes: Float = 0.toFloat()
 
-    private val accelerometerData = ArrayDeque<List<Double>>(100)
+    private val accelerometerData = ArrayDeque<List<Double>>(ACCELEROMETER_DATA_SIZE)
     private lateinit var sensorManager: SensorManager
     private lateinit var accelerometerSensor: Sensor
     private lateinit var model: Classifier
@@ -289,8 +289,12 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
                 )
 
                 // If the queue is too big, remove the oldest data
-                if (accelerometerData.size > 100) {
+                if (accelerometerData.size > ACCELEROMETER_DATA_SIZE) {
                     accelerometerData.removeFirst()
+//                    if (shouldJump())
+//                        velocity = -30f
+//
+//                    accelerometerData.clear()
                 }
 
                 if (shouldJump())
@@ -307,5 +311,6 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
         private const val GRAVITY = 2f
         private const val TUBE_VELOCITY = 4f
         private const val GAP = 800f
+        private const val ACCELEROMETER_DATA_SIZE = 800
     }
 }
