@@ -280,6 +280,7 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
     override fun onSensorChanged(event: SensorEvent?) {
         if (event!!.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION) {
             if (gameState == 1) {
+                // Add the new sensor data to the queue
                 accelerometerData.addLast(
                     listOf(
                         event.values[0].toDouble(),
@@ -290,27 +291,32 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
 
                 // If the queue is too big, remove the oldest data
                 if (accelerometerData.size > ACCELEROMETER_DATA_SIZE) {
-                    accelerometerData.removeFirst()
-//                    if (shouldJump())
-//                        velocity = -30f
-//
-//                    accelerometerData.clear()
-                }
+                    // Perform jump check after handling the data
+                    if (shouldJump()) {
+                        velocity = -30f
+                    }
 
-                if (shouldJump())
-                    velocity = -30f
+                    // Clear half of the old data
+                    val halfSize = accelerometerData.size / 2
+
+                    // Remove the first half of the elements from the deque
+                    repeat(halfSize) {
+                        accelerometerData.removeFirst()
+                    }
+                }
             }
         }
     }
+
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         return
     }
 
     companion object {
-        private const val GRAVITY = 2f
+        private const val GRAVITY = 0.5f
         private const val TUBE_VELOCITY = 4f
         private const val GAP = 800f
-        private const val ACCELEROMETER_DATA_SIZE = 800
+        private const val ACCELEROMETER_DATA_SIZE = 100
     }
 }

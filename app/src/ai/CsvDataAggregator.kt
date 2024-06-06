@@ -1,6 +1,6 @@
-package ai
-
+import ai.PreprocessData
 import android.content.Context
+import android.util.Log
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.github.doyaaaaaken.kotlincsv.dsl.csvWriter
 import java.io.File
@@ -47,11 +47,30 @@ class CsvDataAggregator {
                 csvRows.drop(1).chunked(ROWS_PER_CHUNK) // Drop header and create N-row chunks
             val rowsFeatures = PreprocessData.extractFeatures(groupedRows)
 
-            // Convert each element to string and append the label
-            val datasetRows =
-                rowsFeatures.map { row -> row.map { PreprocessData.formatFeature(it) } + label.toString() }
-            csvWriter().writeAll(datasetRows, datasetFile, append = true)
+            // Initialize previousRow variable
+            var previousRow: List<String>? = null
+
+            rowsFeatures.forEachIndexed { index, row ->
+                // Convert each element in the row to string
+                val stringRow = row.map { it.toString() }
+                Log.d("rows", row.toString())
+                // If it's not the first row, append previous row data to current row
+                val combinedRow = if (index != 0) {
+                    previousRow!!.mapIndexed { i, value -> "$value,${stringRow[i]}" }
+                } else {
+                    stringRow
+                }
+
+                // Write the combined row to the CSV file
+                csvWriter().writeAll(listOf(combinedRow), datasetFile, append = true)
+
+                // Update previousRow for the next iteration
+                previousRow = stringRow
+            }
+
+
         }
+
     }
 
     // Recreate the dataset file and write headers
@@ -65,6 +84,6 @@ class CsvDataAggregator {
 
     companion object {
         // time window
-        private const val ROWS_PER_CHUNK = 800
+        private const val ROWS_PER_CHUNK = 100
     }
 }
