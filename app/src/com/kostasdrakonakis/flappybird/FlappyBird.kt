@@ -317,6 +317,6 @@ class FlappyBird(private val context: Context) : ApplicationAdapter(), SensorEve
         private const val GRAVITY = 0.5f
         private const val TUBE_VELOCITY = 4f
         private const val GAP = 800f
-        private const val ACCELEROMETER_DATA_SIZE = 100
+        private const val ACCELEROMETER_DATA_SIZE = 200
     }
 }
