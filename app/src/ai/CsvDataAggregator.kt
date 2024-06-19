@@ -43,9 +43,14 @@ class CsvDataAggregator {
 
             // Read the CSV file and process the data
             val csvRows = csvReader().readAll(inputStream)
-            val groupedRows =
-                csvRows.drop(1).chunked(ROWS_PER_CHUNK) // Drop header and create N-row chunks
-            val rowsFeatures = PreprocessData.extractFeatures(groupedRows)
+            val overlappingRows = mutableListOf<List<List<String>>>()
+
+            // Create overlapping chunks
+            for (i in 0 until csvRows.size - ROWS_PER_CHUNK) {
+                overlappingRows.add(csvRows.subList(i, i + ROWS_PER_CHUNK))
+            }
+
+            val rowsFeatures = PreprocessData.extractFeatures(overlappingRows)
 
             // Convert each element to string and append the label
             val datasetRows =
