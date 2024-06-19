@@ -16,8 +16,22 @@ class CsvDataAggregator {
         val positiveFolder = "sampledata/positive"
         val negativeFolder = "sampledata/negative"
 
-        aggregateCsvData(context, headers, datasetFileName, positiveFolder, label = true, createDatasetFile = true)
-        aggregateCsvData(context, headers, datasetFileName, negativeFolder, label = false, createDatasetFile = false)
+        aggregateCsvData(
+            context,
+            headers,
+            datasetFileName,
+            positiveFolder,
+            label = true,
+            createDatasetFile = true
+        )
+        aggregateCsvData(
+            context,
+            headers,
+            datasetFileName,
+            negativeFolder,
+            label = false,
+            createDatasetFile = false
+        )
     }
 
     // Read all CSV sample data files from the resources folder and aggregates them into 1 CSV file in the internal storage
@@ -46,8 +60,13 @@ class CsvDataAggregator {
             val overlappingRows = mutableListOf<List<List<String>>>()
 
             // Create overlapping chunks
-            for (i in 0 until csvRows.size - ROWS_PER_CHUNK) {
-                overlappingRows.add(csvRows.subList(i, i + ROWS_PER_CHUNK))
+            for (i in 0 until csvRows.size - ROWS_PER_CHUNK + 1) {
+                val chunk = csvRows.subList(i, i + ROWS_PER_CHUNK)
+                val halfSize = chunk.size / 2
+
+                // Remove the first half of the elements from the chunk
+                val newChunk = chunk.subList(halfSize, chunk.size)
+                overlappingRows.add(newChunk)
             }
 
             val rowsFeatures = PreprocessData.extractFeatures(overlappingRows)
